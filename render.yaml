@@ -4,14 +4,12 @@ services:
     env: docker
     plan: free
     region: oregon
-    buildCommand: docker build -t mission-control .
-    startCommand: docker run -p 10000:3000 mission-control
     dockerfilePath: ./Dockerfile
     envVars:
       - key: NODE_ENV
         value: production
       - key: PORT
-        value: 10000
+        value: 3000
       - key: HOSTNAME
         value: 0.0.0.0
       - key: NEXT_TELEMETRY_DISABLED
@@ -25,11 +23,11 @@ services:
           - name: auth-user
             key: username
     autoDeploy: true
-    healthCheckPath: /api/health
+    healthCheckPath: /api/status
     disk:
       name: mission-control-data
       mountPath: /app/.data
-      sizeGB: 1
+      sizeGB: 5
 
 # Optional: Define environment variables separately for security
 # You can also set these directly in Render dashboard
