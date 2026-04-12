@@ -44,11 +44,11 @@ interface HermesSessionRow {
 }
 
 function getHermesDbPath(): string {
-  return join(config.homeDir, '.hermes', 'state.db')
+  return join(config.hermesHome, 'state.db')
 }
 
 function getHermesPidPath(): string {
-  return join(config.homeDir, '.hermes', 'gateway.pid')
+  return join(config.hermesHome, 'gateway.pid')
 }
 
 let hermesBinaryCache: { checkedAt: number; installed: boolean } | null = null
@@ -65,6 +65,7 @@ function hasHermesCliBinary(): boolean {
   const homeDir = config.homeDir || process.env.HOME || ''
   const candidates = [
     process.env.HERMES_BIN,
+    join(config.hermesHome, 'hermes-agent', 'venv', 'bin', 'hermes'),
     join(dataDir, '.local', 'bin', 'hermes'),
     join(dataDir, '.hermes', 'hermes-agent', 'venv', 'bin', 'hermes'),
     join(homeDir, '.local', 'bin', 'hermes'),
@@ -101,7 +102,9 @@ export function clearHermesDetectionCache(): void {
 }
 
 export function isHermesInstalled(): boolean {
-  // Strict detection: show Hermes UI only when Hermes CLI is actually installed on this system.
+  // HERMES_ENABLED=true lets operators force Hermes UI on even when the binary
+  // is absent from this machine (e.g. MC on Render, Hermes on a remote VPS).
+  if (process.env.HERMES_ENABLED === 'true') return true
   return hasHermesCliBinary()
 }
 

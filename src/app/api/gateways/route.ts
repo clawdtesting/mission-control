@@ -53,14 +53,31 @@ export async function GET(request: NextRequest) {
 
   // If no gateways exist, seed defaults from environment
   if (gateways.length === 0) {
-    const name = String(process.env.MC_DEFAULT_GATEWAY_NAME || 'primary')
-    const host = String(process.env.OPENCLAW_GATEWAY_HOST || '127.0.0.1')
-    const mainPort = getDetectedGatewayPort() || parseInt(process.env.NEXT_PUBLIC_GATEWAY_PORT || '18789')
-    const mainToken = getDetectedGatewayToken()
+    const hermesEnabled = process.env.HERMES_ENABLED === 'true'
+    const hasExplicitOpenClaw = Boolean(process.env.OPENCLAW_GATEWAY_HOST)
 
-    db.prepare(`
-      INSERT INTO gateways (name, host, port, token, is_primary) VALUES (?, ?, ?, ?, 1)
-    `).run(name, host, mainPort, mainToken)
+    // Seed OpenClaw/default gateway unless running Hermes-only (HERMES_ENABLED=true
+    // without an explicit OPENCLAW_GATEWAY_HOST means no OpenClaw in this deployment).
+    if (!hermesEnabled || hasExplicitOpenClaw) {
+      const name = String(process.env.MC_DEFAULT_GATEWAY_NAME || 'primary')
+      const host = String(process.env.OPENCLAW_GATEWAY_HOST || '127.0.0.1')
+      const mainPort = getDetectedGatewayPort() || parseInt(process.env.NEXT_PUBLIC_GATEWAY_PORT || '18789')
+      const mainToken = getDetectedGatewayToken()
+      db.prepare(`
+        INSERT INTO gateways (name, host, port, token, is_primary) VALUES (?, ?, ?, ?, 1)
+      `).run(name, host, mainPort, mainToken)
+    }
+
+    // Seed Hermes gateway when HERMES_ENABLED=true.
+    // It becomes primary when OpenClaw is not explicitly configured.
+    if (hermesEnabled) {
+      const hermesHost = String(process.env.HERMES_GATEWAY_HOST || '127.0.0.1')
+      const hermesPort = parseInt(process.env.HERMES_GATEWAY_PORT || '8644')
+      const isPrimary = !hasExplicitOpenClaw ? 1 : 0
+      db.prepare(`
+        INSERT OR IGNORE INTO gateways (name, host, port, token, is_primary) VALUES (?, ?, ?, ?, ?)
+      `).run('hermes', hermesHost, hermesPort, '', isPrimary)
+    }
 
     const seeded = db.prepare('SELECT * FROM gateways ORDER BY is_primary DESC, name ASC').all() as GatewayEntry[]
     return NextResponse.json({ gateways: redactTokens(seeded) })
