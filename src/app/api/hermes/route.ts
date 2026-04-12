@@ -8,15 +8,11 @@ import { getHermesTasks } from '@/lib/hermes-tasks'
 import { getHermesMemory } from '@/lib/hermes-memory'
 import { logger } from '@/lib/logger'
 
-// In Docker, HOME=/nonexistent — check dataDir first, then homeDir
-import { resolve } from 'node:path'
+// HERMES_HOME comes from config, which honours the HERMES_HOME env var first,
+// then checks <dataDir>/.hermes, then falls back to <os.homedir()>/.hermes.
+import { resolve, dirname } from 'node:path'
 const dataDir = resolve(config.dataDir || '.data')
-const homeDir = config.homeDir || ''
-const HERMES_HOME = existsSync(join(dataDir, '.hermes'))
-  ? join(dataDir, '.hermes')
-  : existsSync(join(homeDir, '.hermes'))
-    ? join(homeDir, '.hermes')
-    : join(dataDir, '.hermes') // default to dataDir for new installs
+const HERMES_HOME = config.hermesHome
 const HOOK_DIR = join(HERMES_HOME, 'hooks', 'mission-control')
 
 export async function GET(request: NextRequest) {
@@ -142,7 +138,7 @@ export async function POST(request: NextRequest) {
       const { model, provider, authMethod } = body
       const hermesBin = join(HERMES_HOME, 'hermes-agent', 'venv', 'bin', 'hermes')
       const bin = existsSync(hermesBin) ? hermesBin : 'hermes'
-      const HOME_DIR = existsSync(join(dataDir, '.hermes')) ? dataDir : homeDir
+      const HOME_DIR = dirname(HERMES_HOME)
       const baseEnv = {
         ...process.env,
         HOME: HOME_DIR,
@@ -271,7 +267,7 @@ export async function POST(request: NextRequest) {
       // Add --non-interactive flags for commands that might prompt
       const env = {
         ...process.env,
-        HOME: existsSync(join(dataDir, '.hermes')) ? dataDir : homeDir,
+        HOME: dirname(HERMES_HOME),
         HERMES_NONINTERACTIVE: '1',
         CI: '1',
         PATH: `${join(dataDir, '.local', 'bin')}:${process.env.PATH || ''}`,

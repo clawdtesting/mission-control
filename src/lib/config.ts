@@ -66,6 +66,15 @@ const defaultMemoryDir = (() => {
 const resolvedGnapRepoPath =
   process.env.GNAP_REPO_PATH || path.join(configuredDataDir, '.gnap')
 
+// Hermes Agent home directory.
+// Priority: HERMES_HOME env var → <dataDir>/.hermes (if exists) → <os.homedir()>/.hermes
+const resolvedHermesHome = (() => {
+  if (process.env.HERMES_HOME) return path.resolve(process.env.HERMES_HOME)
+  const dataCandidate = path.join(resolvedDataDir, '.hermes')
+  if (fs.existsSync(dataCandidate)) return dataCandidate
+  return path.join(os.homedir(), '.hermes')
+})()
+
 export const config = {
   claudeHome:
     process.env.MC_CLAUDE_HOME ||
@@ -94,6 +103,10 @@ export const config = {
     process.env.OPENCLAW_SOUL_TEMPLATES_DIR ||
     (openclawStateDir ? path.join(openclawStateDir, 'templates', 'souls') : ''),
   homeDir: os.homedir(),
+  hermesHome: resolvedHermesHome,
+  hermesGatewayEnabled: process.env.HERMES_ENABLED === 'true',
+  hermesGatewayHost: process.env.HERMES_GATEWAY_HOST || '127.0.0.1',
+  hermesGatewayPort: clampInt(Number(process.env.HERMES_GATEWAY_PORT || '8644'), 1, 65535, 8644),
   gnap: {
     enabled: process.env.GNAP_ENABLED === 'true',
     repoPath: resolvedGnapRepoPath,
