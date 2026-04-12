@@ -1,0 +1,40 @@
+services:
+  - type: web
+    name: mission-control
+    env: docker
+    plan: free
+    region: oregon
+    buildCommand: docker build -t mission-control .
+    startCommand: docker run -p 10000:3000 mission-control
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: HOSTNAME
+        value: 0.0.0.0
+      - key: NEXT_TELEMETRY_DISABLED
+        value: "1"
+      - key: AUTH_PASS
+        fromSync:
+          - name: auth-pass
+            key: password
+      - key: AUTH_USER
+        fromSync:
+          - name: auth-user
+            key: username
+    autoDeploy: true
+    healthCheckPath: /api/health
+    disk:
+      name: mission-control-data
+      mountPath: /app/.data
+      sizeGB: 1
+
+# Optional: Define environment variables separately for security
+# You can also set these directly in Render dashboard
+# envVars:
+#   - key: AUTH_PASS
+#     value: your-secure-password-here
+#   - key: AUTH_USER
+#     value: your-username-here

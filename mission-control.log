@@ -1,0 +1,16 @@
+
+> mission-control@2.0.1 start /home/emperor/workspace/mission-control
+> pnpm run verify:node && next start --hostname 0.0.0.0 --port ${PORT:-3000}
+
+
+> mission-control@2.0.1 verify:node /home/emperor/workspace/mission-control
+> node scripts/check-node-version.mjs
+
+▲ Next.js 16.1.6
+- Local:         http://localhost:3000
+- Network:       http://0.0.0.0:3000
+
+✓ Starting...
+Error: Could not find a production build in the '.next' directory. Try building your app with 'next build' before starting the production server. https://nextjs.org/docs/messages/production-start-no-build-id
+    at ignore-listed frames
+ ELIFECYCLE  Command failed with exit code 1.
