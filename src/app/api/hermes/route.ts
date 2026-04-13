@@ -311,11 +311,12 @@ events:
   - agent:start
   - agent:end
   - session:start
+  - session:end
 `
 
 const HANDLER_PY = `"""
 Mission Control hook for Hermes Agent.
-Reports session telemetry to the MC /api/sessions endpoint.
+Reports session/agent telemetry to the MC /api/hermes/events endpoint.
 
 Configuration (via ~/.hermes/.env or environment):
   MC_URL      - Mission Control base URL (default: http://localhost:3000)
@@ -351,46 +352,17 @@ async def handle(event_name: str, payload: dict) -> None:
         return
 
     try:
-        if event_name == "agent:start":
-            await _report_agent_start(payload)
-        elif event_name == "agent:end":
-            await _report_agent_end(payload)
-        elif event_name == "session:start":
-            await _report_session_start(payload)
+        await _report_event(event_name, payload)
     except Exception as exc:
         logger.debug("MC hook error (%s): %s", event_name, exc)
 
 
-async def _report_agent_start(payload: dict) -> None:
+async def _report_event(event_name: str, payload: dict) -> None:
     import httpx
 
     data = {
-        "name": payload.get("agent_name", "hermes"),
-        "role": "Hermes Agent",
-        "status": "active",
-        "source": "hermes-hook",
-    }
-    async with httpx.AsyncClient(timeout=2.0) as client:
-        await client.post(f"{MC_URL}/api/agents", json=data, headers=_headers())
-
-
-async def _report_agent_end(payload: dict) -> None:
-    import httpx
-
-    data = {
-        "name": payload.get("agent_name", "hermes"),
-        "status": "idle",
-        "source": "hermes-hook",
-    }
-    async with httpx.AsyncClient(timeout=2.0) as client:
-        await client.post(f"{MC_URL}/api/agents", json=data, headers=_headers())
-
-
-async def _report_session_start(payload: dict) -> None:
-    import httpx
-
-    data = {
-        "event": "session:start",
+        "event": event_name,
+        "agent_name": payload.get("agent_name", "hermes"),
         "session_id": payload.get("session_id", ""),
         "source": payload.get("source", "cli"),
         "timestamp": datetime.now(timezone.utc).isoformat(),
