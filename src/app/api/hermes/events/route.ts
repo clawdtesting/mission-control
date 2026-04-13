@@ -55,6 +55,7 @@ export async function POST(request: NextRequest) {
       ).run(status, Math.floor(Date.now() / 1000), agentName, workspaceId)
     }
 
+
     return NextResponse.json({ ok: true, event })
   } catch (error) {
     logger.error({ err: error }, 'POST /api/hermes/events error')

@@ -29,7 +29,7 @@ export interface HermesTaskScanResult {
 }
 
 function getHermesCronDir(): string {
-  return join(config.homeDir, '.hermes', 'cron')
+  return join(config.hermesHome, 'cron')
 }
 
 function peekLatestOutput(cronDir: string, jobId: string): { lastRunAt: string | null; lastOutput: string | null; runCount: number } {
