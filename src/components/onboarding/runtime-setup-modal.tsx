@@ -145,7 +145,7 @@ function OpenClawSetup({ onClose, onComplete }: { onClose: () => void; onComplet
             </div>
           </div>
 
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-red-400 whitespace-pre-wrap">{error}</p>}
 
           {healthStatus?.healthy && (
             <div className="p-3 rounded-lg border border-green-500/30 bg-green-500/5 text-xs text-green-400">
@@ -172,7 +172,7 @@ function OpenClawSetup({ onClose, onComplete }: { onClose: () => void; onComplet
             {output && <pre className="text-xs text-muted-foreground/70 whitespace-pre-wrap mt-2">{output}</pre>}
           </div>
 
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-red-400 whitespace-pre-wrap">{error}</p>}
 
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>Skip for now</Button>
@@ -374,7 +374,7 @@ function HermesSetup({ onClose, onComplete }: { onClose: () => void; onComplete:
             </div>
           )}
 
-          {error && <p className="text-xs text-red-400">{error}</p>}
+          {error && <p className="text-xs text-red-400 whitespace-pre-wrap">{error}</p>}
 
           <div className="flex justify-end gap-2">
             <Button variant="ghost" size="sm" onClick={onClose}>Skip</Button>
