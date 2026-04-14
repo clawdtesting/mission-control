@@ -22,6 +22,16 @@ services:
         fromSync:
           - name: auth-user
             key: username
+      # Hermes agent connection — set these in Render dashboard to point MC at your VPS
+      # After setting, redeploy. Then visit https://<your-mc>.onrender.com/hermes
+      - key: HERMES_ENABLED
+        value: "true"
+      - key: HERMES_GATEWAY_HOST
+        sync: false     # set in dashboard, e.g. 1.2.3.4 (your VPS IP)
+      - key: HERMES_GATEWAY_PORT
+        sync: false     # set in dashboard, e.g. 8644
+      - key: HERMES_API_KEY
+        sync: false     # optional bearer token if your Hermes requires auth
     autoDeploy: true
     healthCheckPath: /api/status
     disk:
