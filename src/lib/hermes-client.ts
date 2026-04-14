@@ -51,12 +51,15 @@ async function hermesRequest<T>(
   method: string,
   path: string,
   body?: unknown,
+  extraHeaders?: Record<string, string>,
 ): Promise<T> {
   const url = `${getBaseUrl()}${path}`
-  const init: RequestInit = {
-    method,
-    headers: { 'Content-Type': 'application/json' },
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (config.hermesApiKey) {
+    headers['Authorization'] = `Bearer ${config.hermesApiKey}`
   }
+  Object.assign(headers, extraHeaders)
+  const init: RequestInit = { method, headers }
   if (body !== undefined) {
     init.body = JSON.stringify(body)
   }
@@ -100,6 +103,54 @@ export async function updateHermesJob(
 
 export async function deleteHermesJob(id: string): Promise<void> {
   await hermesRequest<unknown>('DELETE', `/api/jobs/${encodeURIComponent(id)}`)
+}
+
+// ---------------------------------------------------------------------------
+// Chat completions (OpenAI-compatible)
+// ---------------------------------------------------------------------------
+
+export interface HermesChatMessage {
+  role: 'system' | 'user' | 'assistant'
+  content: string
+}
+
+export interface HermesChatResult {
+  reply: string
+  sessionId?: string
+}
+
+export async function chatWithHermes(
+  messages: HermesChatMessage[],
+  sessionId?: string,
+): Promise<HermesChatResult> {
+  const url = `${getBaseUrl()}/v1/chat/completions`
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (config.hermesApiKey) {
+    headers['Authorization'] = `Bearer ${config.hermesApiKey}`
+  }
+  if (sessionId) {
+    headers['X-Hermes-Session-Id'] = sessionId
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({ model: 'default', messages, stream: false }),
+    signal: AbortSignal.timeout(120_000),
+  })
+
+  if (!response.ok) {
+    const text = await response.text().catch(() => '')
+    throw new Error(`Hermes chat → ${response.status}: ${text}`)
+  }
+
+  const data = await response.json() as {
+    choices?: Array<{ message?: { content?: string } }>
+  }
+  const reply = data.choices?.[0]?.message?.content ?? ''
+  const newSessionId = response.headers.get('x-hermes-session-id') ?? sessionId
+
+  return { reply, sessionId: newSessionId ?? undefined }
 }
 
 // ---------------------------------------------------------------------------

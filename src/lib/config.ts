@@ -107,6 +107,7 @@ export const config = {
   hermesGatewayEnabled: process.env.HERMES_ENABLED === 'true',
   hermesGatewayHost: process.env.HERMES_GATEWAY_HOST || '127.0.0.1',
   hermesGatewayPort: clampInt(Number(process.env.HERMES_GATEWAY_PORT || '8644'), 1, 65535, 8644),
+  hermesApiKey: process.env.HERMES_API_KEY || '',
   gnap: {
     enabled: process.env.GNAP_ENABLED === 'true',
     repoPath: resolvedGnapRepoPath,

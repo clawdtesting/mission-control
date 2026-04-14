@@ -32,6 +32,7 @@ const navGroups: NavGroup[] = [
       { id: 'agents', label: 'Agents', icon: <AgentsIcon />, priority: true, essential: true },
       { id: 'tasks', label: 'Tasks', icon: <TasksIcon />, priority: true, essential: true },
       { id: 'chat', label: 'Chat', icon: <ChatIcon />, priority: false, essential: true },
+      { id: 'hermes', label: 'Hermes', icon: <HermesIcon />, priority: false },
       { id: 'channels', label: 'Channels', icon: <ChannelsIcon />, priority: false },
       { id: 'skills', label: 'Skills', icon: <SkillsIcon />, priority: false },
       { id: 'memory', label: 'Memory', icon: <MemoryIcon />, priority: false },
@@ -87,6 +88,7 @@ const navItemTranslationKeys: Record<string, string> = {
   agents: 'agents',
   tasks: 'tasks',
   chat: 'chat',
+  hermes: 'hermes',
   channels: 'channels',
   skills: 'skills',
   memory: 'memory',
@@ -1252,6 +1254,16 @@ function ChatIcon() {
     <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
       <path d="M13 3H3a1 1 0 0 0-1 1v6l3-2h8a1 1 0 0 0 1-1V4a1 1 0 0 0-1-1z" />
       <path d="M6 11v1a1 1 0 0 0 1 1h4l2 2v-4a1 1 0 0 0-1-1h-1" />
+    </svg>
+  )
+}
+
+function HermesIcon() {
+  return (
+    <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4">
+      <circle cx="8" cy="5" r="3" />
+      <path d="M3 14c0-2.761 2.239-5 5-5s5 2.239 5 5" />
+      <path d="M6 5l-1-2M10 5l1-2M5 3l1 1M11 3l-1 1" />
     </svg>
   )
 }

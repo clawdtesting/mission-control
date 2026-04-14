@@ -82,6 +82,7 @@
     "agents": "Agents",
     "tasks": "Tasks",
     "chat": "Chat",
+    "hermes": "Hermes",
     "channels": "Channels",
     "skills": "Skills",
     "memory": "Memory",
