@@ -73,13 +73,29 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Hermes is not installed (~/.hermes/ not found)' }, { status: 400 })
       }
 
-      mkdirSync(HOOK_DIR, { recursive: true })
+      try {
+        mkdirSync(HOOK_DIR, { recursive: true })
 
-      // Write HOOK.yaml
-      writeFileSync(join(HOOK_DIR, 'HOOK.yaml'), HOOK_YAML, 'utf8')
+        // Write HOOK.yaml
+        writeFileSync(join(HOOK_DIR, 'HOOK.yaml'), HOOK_YAML, 'utf8')
 
-      // Write handler.py
-      writeFileSync(join(HOOK_DIR, 'handler.py'), HANDLER_PY, 'utf8')
+        // Write handler.py
+        writeFileSync(join(HOOK_DIR, 'handler.py'), HANDLER_PY, 'utf8')
+      } catch (err: any) {
+        if (err?.code === 'EACCES' || err?.code === 'EPERM') {
+          const ownerUser = dirname(HERMES_HOME).split('/').filter(Boolean).pop() || '<user>'
+          const fix = [
+            'Permission denied writing Hermes hook directory.',
+            `Run on the Hermes host:`,
+            `  sudo mkdir -p ${join(HERMES_HOME, 'hooks')}`,
+            `  sudo chown -R ${ownerUser}:${ownerUser} ${HERMES_HOME}`,
+            `  chmod -R u+rwX ${HERMES_HOME}`,
+            `Then retry "Install Hook".`,
+          ].join('\n')
+          return NextResponse.json({ error: fix }, { status: 500 })
+        }
+        throw err
+      }
 
       logger.info('Installed Mission Control hook for Hermes Agent')
       return NextResponse.json({ success: true, message: 'Hook installed', hookDir: HOOK_DIR })
