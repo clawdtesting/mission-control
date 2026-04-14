@@ -5,6 +5,7 @@ import { eventBus } from './event-bus'
 import { logger } from './logger'
 import { config } from './config'
 import { syncTaskOutbound } from './github-sync-engine'
+import { isHermesGatewayRunning } from './hermes-sessions'
 
 /** Sync task to GitHub/GNAP and broadcast escalation if task failed */
 function syncAndEscalateIfFailed(task: { id: number; title: string; status: string; priority: string; project_id?: number | null; workspace_id: number; description?: string | null }, newStatus: string, errorMsg?: string, dispatchAttempts?: number): void {
@@ -32,6 +33,7 @@ interface DispatchableTask {
   agent_name: string
   agent_id: number
   agent_config: string | null
+  agent_runtime_type: string | null
   ticket_prefix: string | null
   project_ticket_no: number | null
   project_id: number | null
@@ -452,7 +454,7 @@ export async function runAegisReviews(): Promise<{ ok: boolean; message: string 
           id: task.id, title: task.title, description: task.description,
           status: 'quality_review', priority: 'high', assigned_to: 'aegis',
           workspace_id: task.workspace_id, agent_name: 'aegis', agent_id: 0,
-          agent_config: null, ticket_prefix: task.ticket_prefix,
+          agent_config: null, agent_runtime_type: null, ticket_prefix: task.ticket_prefix,
           project_ticket_no: task.project_ticket_no, project_id: null,
         }
         agentResponse = await callClaudeDirectly(reviewTask, prompt)
@@ -663,11 +665,89 @@ export async function requeueStaleTasks(): Promise<{ ok: boolean; message: strin
   }
 }
 
+// ---------------------------------------------------------------------------
+// Hermes Agent dispatch
+// ---------------------------------------------------------------------------
+
+function isHermesAgent(task: DispatchableTask): boolean {
+  if (task.agent_runtime_type === 'hermes') return true
+  // Also check agent config JSON for runtime_type field
+  if (task.agent_config) {
+    try {
+      const cfg = JSON.parse(task.agent_config)
+      if (cfg.runtime_type === 'hermes') return true
+    } catch { /* ignore */ }
+  }
+  return false
+}
+
+/**
+ * Dispatch a task to a Hermes agent via its OpenAI-compatible chat completions
+ * endpoint (http://<host>:<port>/v1/chat/completions).
+ *
+ * Hermes blocks on the response, so this returns the agent's reply directly.
+ * Falls back to the direct Claude API when the Hermes gateway is not running.
+ */
+async function callHermesAgent(
+  task: DispatchableTask,
+  prompt: string,
+): Promise<AgentResponseParsed> {
+  const soul = getAgentSoulContent(task)
+
+  // Try live Hermes gateway first
+  if (isHermesGatewayRunning()) {
+    const baseUrl = `http://${config.hermesGatewayHost}:${config.hermesGatewayPort}`
+    const messages: Array<{ role: string; content: string }> = [
+      { role: 'user', content: prompt },
+    ]
+
+    const body: Record<string, unknown> = {
+      model: 'hermes',   // Hermes ignores this — uses its configured model
+      messages,
+      stream: false,
+    }
+    if (soul) body.system = soul
+
+    logger.info({ taskId: task.id, agent: task.agent_name, baseUrl }, 'Dispatching task to Hermes gateway')
+
+    const res = await fetch(`${baseUrl}/v1/chat/completions`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body),
+      signal: AbortSignal.timeout(120_000),
+    })
+
+    if (!res.ok) {
+      const errBody = await res.text().catch(() => '')
+      throw new Error(`Hermes gateway ${res.status}: ${errBody.substring(0, 500)}`)
+    }
+
+    const data = await res.json() as {
+      choices?: Array<{ message?: { content?: string }; text?: string }>
+      id?: string
+    }
+
+    const text = data.choices?.[0]?.message?.content
+      || data.choices?.[0]?.text
+      || null
+
+    return { text: text || null, sessionId: data.id || null }
+  }
+
+  // Gateway offline — fall back to direct Claude API
+  logger.warn({ taskId: task.id, agent: task.agent_name }, 'Hermes gateway not running — falling back to direct Claude API')
+  if (!getAnthropicApiKey()) {
+    throw new Error('Hermes gateway is not running and ANTHROPIC_API_KEY is not set — cannot dispatch task')
+  }
+  return callClaudeDirectly(task, prompt)
+}
+
 export async function dispatchAssignedTasks(): Promise<{ ok: boolean; message: string }> {
   const db = getDatabase()
 
   const tasks = db.prepare(`
     SELECT t.*, a.name as agent_name, a.id as agent_id, a.config as agent_config,
+           a.runtime_type as agent_runtime_type,
            p.ticket_prefix, t.project_ticket_no
     FROM tasks t
     JOIN agents a ON a.name = t.assigned_to AND a.workspace_id = t.workspace_id
@@ -740,7 +820,10 @@ export async function dispatchAssignedTasks(): Promise<{ ok: boolean; message: s
       let agentResponse: AgentResponseParsed
       const useDirectApi = !isGatewayAvailable() && getAnthropicApiKey()
 
-      if (useDirectApi && !targetSession) {
+      if (isHermesAgent(task)) {
+        // Hermes agent — dispatch via Hermes gateway API
+        agentResponse = await callHermesAgent(task, prompt)
+      } else if (useDirectApi && !targetSession) {
         // Direct Claude API dispatch — no gateway needed
         agentResponse = await callClaudeDirectly(task, prompt)
       } else if (targetSession) {
