@@ -1,0 +1,46 @@
+export type PrimeState =
+  | 'DISCOVERED'
+  | 'EVALUATED'
+  | 'COMMIT_READY'
+  | 'COMMITTED_UNSIGNED'
+  | 'COMMIT_CONFIRMED'
+  | 'REVEAL_READY'
+  | 'REVEALED_UNSIGNED'
+  | 'REVEAL_CONFIRMED'
+  | 'SHORTLIST_PENDING'
+  | 'FINALIST'
+  | 'FINALIST_ACCEPT_READY'
+  | 'FINALIST_ACCEPTED_UNSIGNED'
+  | 'FINALIST_ACCEPT_CONFIRMED'
+  | 'TRIAL_EXECUTION_READY'
+  | 'TRIAL_EXECUTED'
+  | 'TRIAL_PUBLISHED'
+  | 'VALIDATOR_SCORING_PENDING'
+  | 'WINNER_PENDING'
+  | 'WINNER_DESIGNATED'
+  | 'FALLBACK_PROMOTABLE'
+  | 'DONE'
+  | 'FAILED'
+  | 'BLOCKED_DEADLINE'
+  | 'BLOCKED_OPERATOR_REVIEW'
+  | 'BLOCKED_RETRIEVAL_REQUIRED'
+  | 'BLOCKED_ARTIFACT_EMISSION_REQUIRED'
+
+export interface PrimeDeadlines {
+  commitDeadline: string
+  revealDeadline: string
+  finalistAcceptDeadline: string
+  trialDeadline: string
+  scoreCommitDeadline: string
+  scoreRevealDeadline: string
+  fallbackPromotionDeadline: string
+}
+
+export interface PrimeJob {
+  id: string
+  objective: string
+  protocol?: 'prime'
+  procurementId: string
+  operatorApproved?: boolean
+  deadlines: PrimeDeadlines
+}
